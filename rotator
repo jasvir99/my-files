@@ -1,0 +1,455 @@
+#!/bin/bash
+
+###########################################################################
+#
+#	Shell program to Put Random Signatures of LOST,  OTHERS files,
+#       and pgp signatures to outgoing mail
+#
+#	Copyright 2001, USM Bish <bish@nde.vsnl.net.in>.
+#
+#	This program is free software; you can redistribute it and/ or
+#	modify it under the terms of the GNU General Public License as
+#	published by the Free Software Foundation; either version 2 of
+#	the License, or (at your option) any later version. 
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or  FITNESS FOR A  PARTICULAR PURPOSE. See the
+#	GNU General Public License for more details.
+#
+#	Description: The script is designed to  interface with various
+#       mailers like mutt, pine (where the editor can be changed to an
+#       external  mailer  for composing / reply; and enable  random or 
+#       specific signature generation from "LOST" or "OTHER" signature 
+#       templates saved in LOST individual sig file format
+#       
+#	Usage: be used from within mailer by changing editor option
+#
+#	Revisions:
+#
+#	Sep/10/2001	File created            ..... ver 0.1
+#       Sep/11/2001     Working model 		..... ver 0.2
+#       Sep/13/2001     Simple menu             ..... ver 0.3
+#       Sep/16/2001     Fix for second edit
+#                       and re-run of rotator   ..... ver 0.4 
+#       Sep/30/2001     pgp support added       ..... ver 0.5
+#
+###########################################################################
+
+# EDIT THIS !!!! Preferred editor to be used while mailing
+EDITOR="vim"			
+
+# Signature file. Most mailers use a file called .signature
+# In case you want to leave that intact, use another name.
+# This will be erased after every mail, and will not be
+# available in your home directory 
+
+#MYSIG=$HOME/my_sig.$$
+#MYSIG=$HOME/.signature
+
+# Where does your root dir for signature files lie ? 
+
+SIG_ROOT=$HOME/signature
+#SIG_ROOT=/var/signature
+
+##########################################################################
+# Do NOT edit below this line
+##########################################################################
+
+# What are the directories under SIG_ROOT
+# Prepend them to GROUP prefix as below:
+GROUP1=LOST
+GROUP2=OTHERS
+
+# Name of lock file. Do NOT edit
+LOCKFILE=$HOME/.rotator.lock
+
+# DO NOT change this too. 
+
+PGP="000.others" 
+INFILE=$1
+PROGNAME=`basename $0`
+VERSION="0.5"
+
+##############################################################
+
+function Do_pgp
+{
+    NUMBER=$SIG_ROOT/$GROUP2/$PGP
+    if [ -s "$NUMBER" ]; then
+       echo -en "\n" >> $INFILE
+       cat $NUMBER >> $INFILE
+       $EDITOR $INFILE
+       return
+    else  # No PGP file found; do OTHERS (random)
+       SIG_DIR=$SIG_ROOT/$GROUP2
+       SUFFIX=others
+       Do_OTHERS_random
+    fi
+}
+
+function Pad_zero
+{    
+    # The variable NUMBER is padded with zeros if needed
+    # Pad with single zero for 2 digit numbers and
+    # with two zeros in front for 1 digit numbers.
+ 
+    if [ "$NUMBER" -lt 100 ]; then
+       if [ "$NUMBER" -lt 10 ]; then
+          NEW_NUM="00"$NUMBER
+       else
+          NEW_NUM="0"$NUMBER
+       fi
+    else
+       NEW_NUM=$NUMBER  
+    fi
+
+    NUMBER=$NEW_NUM
+
+    # Trim number to three digits if extra
+     
+    echo $NUMBER > $HOME/rot.$$
+    NREV=`rev $HOME/rot.$$`
+    echo $NREV | cut -b 1-3 > $HOME/rot.$$
+    NUMBER=`rev $HOME/rot.$$`
+    rm -f $HOME/rot.$$
+}
+
+function View_sig
+{
+     echo
+     echo "------------------------------------"
+     echo "The sig file $SEARCH.lost is shown here"
+     echo "Press :q to quit"
+     echo "------------------------------------"
+     echo ""
+     less $LOST_PATH/$SEARCH.lost
+     echo -en "Options --> [1]Menu  [2]Insert as sig : "
+     read NEW_ANSWER
+     case $NEW_ANSWER in
+        1|M|m|MENU|memu|Menu)
+           Do_LOST_menu
+           ;;
+        2|I|i|INSERT|insert|Insert)
+           echo -en "\n" >> $INFILE
+           cat $LOST_PATH/$SEARCH.lost >> $INFILE
+           $EDITOR $INFILE
+           return
+           ;;
+        *) View_Sig;;
+     esac   
+}
+          
+function Do_LOST_menu
+{
+    LOST_PATH=$SIG_ROOT/$GROUP1
+    MENU=/tmp/lost.menu
+    
+    echo 'List LOST Tips available. Press "q" to exit menu' > $MENU
+    echo "then type the LOST Tip No." >> $MENU
+    echo "" >> $MENU
+    echo "-----------------------------------------------" >> $MENU
+    echo "" >> $MENU    
+          
+    cat $LOST_PATH/*.lost | grep "Sub :" >> $MENU
+    
+    less $MENU 
+    echo ""
+    echo -en "Enter LOST No : "
+    read SEARCH
+
+    NUMBER=$SEARCH
+    Pad_zero
+    SEARCH=$NUMBER
+        
+    if [ -s "$LOST_PATH/$SEARCH.lost" ]; then
+       echo -en "What Next --> [1]View sig file  [2]Insert as sig : "
+       read ANSWER
+       case $ANSWER in
+       
+          1|V|v|VIEW|view|View)
+             View_sig
+             ;;
+          2|I|i|INSERT|insert|Insert)
+             echo -en "\n" >> $INFILE
+             cat $LOST_PATH/$SEARCH.lost >> $INFILE
+             $EDITOR $INFILE
+             return
+             ;;
+          *) Do_LOST_menu
+             ;;
+       esac     
+    else
+       echo "ERROR 1: Sig File Not found"
+       Menu1                         
+    fi
+}
+
+function write_sig
+{
+    cp $SIG_FILE $MYSIG
+}
+
+function get_file_name
+{
+    SIG_FILE=`ls $SIG_DIR/*.$SUFFIX | grep "$RND_NUMBER"`
+}
+
+function check_how_many
+{
+    PD=`pwd`
+    cd $SIG_DIR
+    CNT=0
+    for i in `ls *.$SUFFIX`; do
+        CNT=$((CNT+1))
+    done
+    TOTAL_SIGS=$CNT
+    CNT=0
+    cd $PD
+}
+
+    
+function generate_random
+{
+    check_how_many
+    RANGE=$TOTAL_SIGS
+    RND_NUMBER=$RANDOM
+    let "RND_NUMBER %= $RANGE"
+    NUMBER=$RND_NUMBER
+    Pad_zero
+    RND_NUMBER=$NUMBER
+}    
+
+function random_sig
+{
+    generate_random
+    get_file_name
+    write_sig
+}
+
+function Get_options
+{
+    echo -en "["$PROGNAME" v-"$VERSION" Signature [L|M|N|O|P] : "
+    read SIG
+    FIRST=`echo $SIG | awk '{print $1}'`
+    SECOND=`echo $SIG | awk '{print $2}'`
+    
+    case $FIRST in
+    
+         L|l|LOST|lost|Lost)
+            if ! [ "$SECOND" = "" ]; then
+                NUMBER=$SECOND
+                Pad_zero
+                SECOND=$NUMBER                
+                NUMBER=$SIG_ROOT/$GROUP1/$SECOND.lost
+                    if [ -s "$NUMBER" ]; then
+                        echo -en "\n" >> $INFILE
+                        cat $NUMBER >> $INFILE
+                        $EDITOR $INFILE
+                        return
+                    else
+                        echo "ERROR 1: Sig File Not found"
+                        Menu1                         
+                    fi
+             else
+                SIG_DIR=$SIG_ROOT/$GROUP1
+                SUFFIX=lost
+                Do_LOST_random
+             fi          
+             ;;
+             
+         O|o|OTHERS|others|Others)
+            if ! [ "$SECOND" = "" ]; then
+                NUMBER=$SIG_ROOT/$GROUP2/$SECOND.others
+                    if [ -s "$NUMBER" ]; then
+                        echo -en "\n" >> $INFILE
+                        cat $NUMBER >> $INFILE
+                        $EDITOR $INFILE
+                        return
+                    else
+                        echo "ERROR 1: Sig File Not found"
+                        Menu1                         
+                    fi
+             else
+                SIG_DIR=$SIG_ROOT/$GROUP2
+                SUFFIX=others
+                Do_OTHERS_random
+             fi          
+             ;;
+ 
+          M|m|MENU|menu|Menu)
+             Do_LOST_menu
+             ;;           
+
+          N|n|Nil|NIL|nil)
+             Do_None
+             ;;
+
+          P|p|PGP|Pgp|pgp)
+            Do_pgp       
+            ;;
+       
+          *) echo "Error 2: No such sig option : "$FIRST
+             Menu1;;            
+        
+    esac 
+}
+    
+function Do_OTHERS_specific
+{
+    SIG_DIR=$SIG_ROOT/$GROUP2
+    SUFFIX=others
+    check_how_many
+    echo -en "OTHERS Number : "
+    read SECOND
+    NUMBER=$SECOND
+    Pad_zero
+    SECOND=$NUMBER
+    NUMBER=$SIG_ROOT/$GROUP2/$SECOND.others
+    if [ -s "$NUMBER" ]; then
+       echo -en "\n" >> $INFILE
+       cat $NUMBER >> $INFILE
+       $EDITOR $INFILE
+       return
+    else
+       echo "ERROR 1: Not found : "`basename $NUMBER`" (Max : ["$TOTAL_SIGS"])"
+       Menu1                         
+    fi
+    echo -en "\n" >> $INFILE
+    cat $HOME/signature/OTHERS/$NUMBER >> $INFILE
+    $EDITOR $INFILE
+    return
+}
+    
+function Do_OTHERS_random
+{
+    SIG_DIR=$SIG_ROOT/$GROUP2
+    SUFFIX=others
+    check_how_many
+    random_sig
+    echo -en "\n" >> $INFILE
+    cat $MYSIG >> $INFILE
+    $EDITOR $INFILE
+    return
+}
+
+
+function Do_LOST_specific
+{
+    SIG_DIR=$SIG_ROOT/$GROUP1
+    SUFFIX=lost
+    check_how_many
+    echo -en "LOST Number : "
+    read SECOND
+    NUMBER=$SECOND
+    Pad_zero
+    SECOND=$NUMBER
+
+    NUMBER=$SIG_ROOT/$GROUP1/$SECOND.lost
+    if [ -s "$NUMBER" ]; then
+       echo -en "\n\n\n" >> $INFILE
+       cat $NUMBER >> $INFILE
+       $EDITOR $INFILE
+       return
+    else
+       echo "ERROR 1: Not found : "`basename $NUMBER`" (Max : ["$TOTAL_SIGS"])"
+       Menu1                         
+    fi
+    echo -en "\n\n\n" >> $INFILE
+    cat $HOME/signature/LOST/$NUMBER >> $INFILE
+    $EDITOR $INFILE
+    return
+}
+    
+function Do_LOST_random
+{
+    SIG_DIR=$SIG_ROOT/$GROUP1
+    SUFFIX=lost
+    check_how_many
+    random_sig
+    echo -en "\n\n\n" >> $INFILE
+    cat $MYSIG >> $INFILE
+    $EDITOR $INFILE
+    return
+}
+
+function Do_OTHERS
+{
+    echo -en "OTHERS Options --> [1] Random [2] Specific : "
+    read OTHERS_ANS
+    case $OTHERS_ANS in
+        1|R|r|Random|RANDOM|random) Do_OTHERS_random;;
+        2|S|s|Specific|SPECIFIC|specific) Do_OTHERS_specific;;
+        *) Do_Others;;
+    esac
+}
+
+function Do_LOST
+{
+    echo -en "LOST Options --> [1] Random [2] Specific [3] Menu : "
+    read LOST_ANS
+    case $LOST_ANS in
+        1|R|r|Random|RANDOM|random) Do_LOST_random;;
+        2|S|s|Specific|SPECIFIC|specific) Do_LOST_specific;;
+        3|M|m|Menu|MENU|menu) Do_LOST_menu ;;
+        *) Do_Lost;;
+    esac
+}
+    
+function Do_None
+{
+    $EDITOR $INFILE
+    return
+}
+
+function graceful_exit
+{
+    rm -f $MYSIG
+    exit 0
+}
+    
+function Menu1
+{     
+    echo -en "Signature Option --> [1]None  [2]LOST  [3]Others : "
+    read ANSWER
+    case $ANSWER in
+        1|N|n|None|NONE|none) Do_None;;
+        2|L|l|Lost|LOST|lost) Do_LOST;;
+        3|O|o|Others|OTHERS|others) Do_OTHERS;;
+        *) Menu1;;
+    esac
+}
+
+########################################
+# Main Program
+########################################
+
+# Exit if not run from within mailer
+
+if ! [ $1 ]; then
+   echo $PROGNAME"                       Version : "$VERSION
+   echo "This must be run from a mailer ... Quitting"
+   exit 1
+fi
+   
+# Amendments made in ver 0.4 to correct the problem
+# of second pass, wherein the menu was coming again
+
+LOCK_SIZE=`ls -al $INFILE | awk '{print $5}'`
+OLD_LOCK_SIZE=`cat $LOCKFILE 2> /dev/null`
+echo $LOCK_SIZE > $LOCKFILE
+
+if [ "$OLD_LOCK_SIZE" = "$LOCK_SIZE" ]; then
+   # Re-edit. Do not pass through menu
+   $EDITOR $INFILE
+   graceful_exit
+else
+   # New file. Pass through menu
+   Get_options
+   LOCK_SIZE=`ls -al $INFILE | awk '{print $5}'`   
+   echo $LOCK_SIZE > $LOCKFILE
+   graceful_exit   
+fi
+
+graceful_exit
+      

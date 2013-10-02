@@ -1,0 +1,135 @@
+##							##
+##	CONFIGURATION FILE FOR MUTT, ONLY FOR GMAIL.	##
+##########################################################
+
+#######################################
+############ EDIT FROM HERE ###########
+#######################################
+
+#YOUR USERNAME OF GMAIL without @gmail.com
+set imap_user = ""
+#
+# ENTER YOUR GMAIL ACCOUNT IN PLACE OF "user"
+set smtp_url = ""
+#
+# AGAIN ENTER YOUR EMAIL
+set from = ""
+#
+# YOUR FULL NAME, IT WILL APPEAR TO RECIEVER
+set realname = ""
+#
+# YOUR TEXT EDITOR 
+set editor=""
+#Signature
+set signature=""
+#######################################
+############ EDIT UPTO HERE ###########
+#######################################
+
+########## OPTIONAL #############################################################
+######### ENTER THE VALUE IN QUOTES #############################################
+######### IF YOU DON'T FILL THIS, MUTT WILL AUTOMATICALLY ASK WHEN YOU OPEN MUTT
+#################################################################################
+set imap_pass = ""
+set smtp_pass = ""
+########## OPTIONAL ###################
+
+# Basic config, you can leave this as is
+set folder = "imaps://imap.gmail.com:993"
+set spoolfile = "+INBOX"
+set imap_check_subscribed
+set hostname = gmail.com
+set mail_check = 120
+set timeout = 300
+set imap_keepalive = 300
+set postponed = "+[Gmail]/Drafts"
+set header_cache=~/.mutt/cache/headers
+set message_cachedir=~/.mutt/cache/bodies
+set certificate_file=~/.mutt/certificates
+set move = no
+set include
+set sort = 'threads'
+set sort_aux = 'reverse-last-date-received'
+set auto_tag = yes
+set sendmail_wait=0
+ignore "Authentication-Results:"
+ignore "DomainKey-Signature:"
+ignore "DKIM-Signature:"
+hdr_order Date From To Cc
+alternative_order text/plain text/html *
+auto_view text/html
+bind editor <Tab> complete-query
+bind editor ^T complete
+bind editor <space> noop 
+
+# Gmail-style keyboard shortcuts
+macro index,pager y "<enter-command>unset trash\n <delete-message>" "Gmail archive message"
+macro index,pager d "<enter-command>set trash=\"imaps://imap.googlemail.com/[GMail]/Bin\"\n <delete-message>" "Gmail delete message"
+macro index,pager gi "<change-folder>=INBOX<enter>" "Go to inbox"
+macro index,pager ga "<change-folder>=[Gmail]/All Mail<enter>" "Go to all mail"
+macro index,pager gs "<change-folder>=[Gmail]/Starred<enter>" "Go to starred messages"
+macro index,pager dd "<change-folder>=[Gmail]/Drafts<enter>" "Go to drafts"
+macro index,pager gd "<change-folder>=GD<enter>" "Go to GD"
+
+##### TEMPLATE FOR ADDING MORE SHORTCUTS ##########
+macro index,pager gl "<change-folder>=NewLabel<enter>" "Go to NewLabel"
+##### TEMPLATE FOR ADDING MORE SHORTCUTS ##########
+##### Colors
+#####        #####
+
+color	header	  cyan	    default .
+color   header    yellow    default ^From
+color   header    yellow    default ^Subject
+color   body      yellow    default [_a-z\.\$A-Z0-9-]+@[a-zA-Z0-9\./\-]+
+color   body      yellow    default (http|ftp)://[_a-zA-Z0-9\?\=\&\@\%\#\:\,\./~\-]+
+color   quoted    green     default
+color   quoted1   cyan      default
+color   quoted2   magenta   default
+color   signature cyan      black
+color   attachment magenta  default
+color   tree      cyan      default
+color   indicator black     yellow
+color   status    blue      black
+color   tilde     blue      default
+color   normal    white     default
+color   message	  cyan		default	# info messages
+
+color index      white         default "~p"
+color index      green   default "! ~p"
+
+color header     yellow         default    "importance: "
+color header     blue           default    "importance: normal"
+color header     brightred      default    "importance: high"
+color index      brightyellow    default    "~h 'importance: high'"
+color header     yellow         default    "precedence: "
+color header     blue           default    "priority: "
+color header     brightred      default    "priority: high"
+color header     red            default    "priority: urgent"
+color index      brightyellow    default    "~h 'priority: high'"
+color index      brightyellow    default    "~h 'priority: urgent'"
+color header     blue           default    "priority: normal"
+color header     brightred      default    "x-priority: "
+color header     yellow         default    "X-MSMail-Priority: "
+color index      brightred      default    "~F"
+color index      yellow         default    "~N"
+color index      brightyellow   default    "~N ~p"
+color index      brightblue     default    "~T"    # Tagged
+color index      red            default    "~D"       # Delete
+color index      brightred      black      "~t jass ~N"
+set mail_check=120       # check for new mail every 90 seconds
+set timeout=15           # after 15 secs of no keypresses, start checking for new mail
+set beep_new		# beep on new mail
+# Formating
+set compose_format="-- %v-- Compose  [Approximate Message Size: %l   Attachments: %a]%>-"
+set attach_format="%u%D%I %t%4n %T%.40d%> [%.7m/%.10M, %.6e%?C?, %C?, %s] "
+set alias_format="%4n %2f %t %-12a  %r"
+set status_format="-%r-%v--[%?M?%M/?%m msgs%?n?, %n new?%?d?, %d del?%?F?, %F flag?%?t?, %t tag?%?p?, %p postp?%?b?, %b inc?%?l?, %l?]--(%f)--%s-%>-%P-"
+set folder_format="%3C %t%N %F %-8.8u %-8.8g %8s %d %f"
+set message_format="%-.16n: %s"
+set pager_format="~~~~~~~~~ On %{%a, %d %b %Y} at [%[%H:%M]]: %s %|~"
+set attribution='On %{%a, %d %b %Y}, %n wrote:\n'
+set forward_format = "[%s]"
+
+# h will take you to the folder list in the index
+macro index h "c?t"
+
